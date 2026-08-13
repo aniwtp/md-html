@@ -1,0 +1,9 @@
+[package]
+name = "md-html"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+pulldown-cmark = { version = "=0.13.4", features = ["simd"] }
+ammonia = "=4.1.3"
+thiserror = "2.0.18"
