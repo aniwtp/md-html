@@ -48,7 +48,11 @@ fn expand_spoilers(text: &str) -> Vec<Event<'static>> {
         let after = &remaining[start + 2..];
         if let Some(end) = after.find("||") {
             let content = &after[..end];
-            events.push(Event::Html(format!(r#"<span class="spoiler">{content}</span>"#).into()));
+            let escaped = content
+                .replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;");
+            events.push(Event::Html(format!(r#"<span class="spoiler">{escaped}</span>"#).into()));
             remaining = &after[end + 2..];
         } else {
             // незакрытый || — оставляем как есть
