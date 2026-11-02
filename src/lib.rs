@@ -2,17 +2,19 @@ use ammonia::Builder;
 use pulldown_cmark::{Event, Options, Parser, html};
 use std::collections::{HashMap, HashSet};
 
-pub const MAX_MARKDOWN_LEN: usize = 1200;
+/// Лимит markdown-текста в символах Unicode (не байтах).
+pub const MAX_MARKDOWN_CHARS: usize = 4000;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MdError {
-    #[error("поле `description` слишком длинное: максимум {max}, получено {actual}")]
+    #[error("markdown слишком длинный: максимум {max} символов, получено {actual}")]
     TooLong { max: usize, actual: usize },
 }
 
 pub fn validate_markdown(input: &str) -> Result<(), MdError> {
-    if input.len() > MAX_MARKDOWN_LEN {
-        return Err(MdError::TooLong { max: MAX_MARKDOWN_LEN, actual: input.len() });
+    let actual = input.chars().count();
+    if actual > MAX_MARKDOWN_CHARS {
+        return Err(MdError::TooLong { max: MAX_MARKDOWN_CHARS, actual });
     }
     Ok(())
 }
@@ -72,4 +74,21 @@ fn sanitize(html: &str) -> String {
     allowed_classes.insert("span", HashSet::from(["spoiler"]));
 
     Builder::default().add_tags(&["span"]).allowed_classes(allowed_classes).clean(html).to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn limit_is_in_chars_not_bytes() {
+        // кириллица: 2 байта на символ, ровно лимит проходит
+        assert!(validate_markdown(&"я".repeat(MAX_MARKDOWN_CHARS)).is_ok());
+        match validate_markdown(&"я".repeat(MAX_MARKDOWN_CHARS + 1)) {
+            Err(MdError::TooLong { max, actual }) => {
+                assert_eq!((max, actual), (MAX_MARKDOWN_CHARS, MAX_MARKDOWN_CHARS + 1));
+            },
+            other => panic!("expected TooLong, got {other:?}"),
+        }
+    }
 }
